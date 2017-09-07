@@ -2,8 +2,11 @@ require 'oystercard'
 
 describe Oystercard do
 subject(:card){ described_class.new }
+let(:entry_station) {double :station}
+let(:exit_station) {double :station}
+let(:journey) { {entry_station: :station, exit_station: :station} }
 
-  it"has a balance of zero" do
+  it "has a balance of zero" do
   expect(card.balance).to eq(0)
   end
 
@@ -22,11 +25,10 @@ subject(:card){ described_class.new }
   end
 
   describe "#deduct" do
-    it "is able to deduct from balance" do
+    it "is able to deduct from balance on touch_out" do
     card.topup(10)
-    card.touch_out
-    expect(card).to respond_to(:deduct).with(1).argument
-    expect{ card.deduct(5) }.to change{ card.balance }.by -5
+    card.touch_in(:station)
+    expect{ card.touch_out(:station) }.to change{ card.balance }.by -(Oystercard::MIN_FARE)
     end
   end
 
@@ -36,15 +38,15 @@ subject(:card){ described_class.new }
 
   it "lets you touch_in" do
     card.topup(10)
-    card.touch_in
-    expect(card).to be_in_journey
+    card.touch_in(:station)
+    #expect(card).to be_in_journey
   end
 
-  it "lets you touch_out" do
+  it "stores the exit_station" do
     card.topup(10)
-    #card.touch_in
-    card.touch_out
-    expect(card).not_to be_in_journey
+    card.touch_in(:station)
+    card.touch_out(:station)
+    expect(card.exit_station).to eq(:station)
   end
 
   it "doesn't let you touch_in if no min balance" do
@@ -52,6 +54,18 @@ subject(:card){ described_class.new }
   #card.topup(10)
   #card.touch_in
   message = "Insufficient funds"
-  expect { card.touch_in }.to raise_error message
+  expect { card.touch_in(:station) }.to raise_error message
+  end
+
+  it "has an empty list of journeys by default" do
+   expect(card.journey).to be_empty
+  end
+
+  it "stores a journey" do
+    #min_balance = Oystercard::MIN_BALANCE
+    card.topup(10)
+    card.touch_in(:station)
+    card.touch_out(:station)
+    expect(card.journey).to include(journey)
   end
 end
